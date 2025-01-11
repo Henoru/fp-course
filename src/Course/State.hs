@@ -44,8 +44,7 @@ exec ::
   State s a
   -> s
   -> s
-exec =
-  error "todo: Course.State#exec"
+exec st s= snd $ (runState st) s 
 
 -- | Run the `State` seeded with `s` and retrieve the resulting value.
 --
@@ -54,8 +53,7 @@ eval ::
   State s a
   -> s
   -> a
-eval =
-  error "todo: Course.State#eval"
+eval st s = fst $ (runState st) s
 
 -- | A `State` where the state also distributes into the produced value.
 --
@@ -63,8 +61,7 @@ eval =
 -- (0,0)
 get ::
   State s s
-get =
-  error "todo: Course.State#get"
+get = State (\s -> (s,s))
 
 -- | A `State` where the resulting state is seeded with the given value.
 --
@@ -73,8 +70,7 @@ get =
 put ::
   s
   -> State s ()
-put =
-  error "todo: Course.State#put"
+put s = State (\_ -> ((),s))
 
 -- | Implement the `Functor` instance for `State s`.
 --
@@ -85,8 +81,7 @@ instance Functor (State s) where
     (a -> b)
     -> State s a
     -> State s b
-  (<$>) =
-    error "todo: Course.State#(<$>)"
+  (<$>) f (State sa) = State (\s -> (let (a,s1) = sa s in (f a,s1)))
 
 -- | Implement the `Applicative` instance for `State s`.
 --
@@ -102,14 +97,16 @@ instance Applicative (State s) where
   pure ::
     a
     -> State s a
-  pure =
-    error "todo: Course.State pure#instance (State s)"
+  pure a = State (\s -> (a,s))
   (<*>) ::
     State s (a -> b)
     -> State s a
     -> State s b
-  (<*>) =
-    error "todo: Course.State (<*>)#instance (State s)"
+  (<*>) (State sf) (State sa) = State
+    (\s0 -> let (f, s1) = sf s0 in
+      let (a , s2) = sa s1 in
+        (f a ,s2))
+
 
 -- | Implement the `Monad` instance for `State s`.
 --
@@ -126,8 +123,8 @@ instance Monad (State s) where
     (a -> State s b)
     -> State s a
     -> State s b
-  (=<<) =
-    error "todo: Course.State (=<<)#instance (State s)"
+  (=<<) f (State sa) = State $ \s0 -> let (a, s1) = sa s0
+                                      in runState (f a) s1
 
 -- | Find the first element in a `List` that satisfies a given predicate.
 -- It is possible that no element is found, hence an `Optional` result.
@@ -138,18 +135,22 @@ instance Monad (State s) where
 --   find ::  (a ->   Bool) -> List a ->    Optional a
 --   findM :: (a -> f Bool) -> List a -> f (Optional a)
 --
--- >>> let p x = (\s -> (const $ pure (x == 'c')) =<< put (1+s)) =<< get in runState (findM p $ listh ['a'..'h']) 0
+-- >>> let p x = (\s -> (const $ pure (x == 'c')) =<< put (1+s)) =<< get 
+--     in runState (findM p $ listh ['a'..'h']) 0
 -- (Full 'c',3)
 --
--- >>> let p x = (\s -> (const $ pure (x == 'i')) =<< put (1+s)) =<< get in runState (findM p $ listh ['a'..'h']) 0
+-- >>> let p x = (\s -> (const $ pure (x == 'i')) =<< put (1+s)) =<< get 
+--     in runState (findM p $ listh ['a'..'h']) 0
 -- (Empty,8)
 findM ::
   Monad f =>
   (a -> f Bool)
   -> List a
   -> f (Optional a)
-findM =
-  error "todo: Course.State#findM"
+findM f Nil = pure Empty
+findM f (a:.as) = do
+  b <- f a
+  if b then pure (Full a) else findM f as
 
 -- | Find the first element in a `List` that repeats.
 -- It is possible that no element repeats, hence an `Optional` result.
@@ -165,8 +166,16 @@ firstRepeat ::
   Ord a =>
   List a
   -> Optional a
-firstRepeat =
-  error "todo: Course.State#firstRepeat"
+firstRepeat l = eval (findM ff l) S.empty
+  where 
+    ff :: Ord a => a -> State (S.Set a) Bool
+    ff a = do
+      s <- get
+      if S.member a s then
+        pure True
+      else do
+        put (S.insert a s)
+        pure False
 
 -- | Remove all duplicate elements in a `List`.
 -- /Tip:/ Use `filtering` and `State` with a @Data.Set#Set@.
@@ -178,8 +187,15 @@ distinct ::
   Ord a =>
   List a
   -> List a
-distinct =
-  error "todo: Course.State#distinct"
+distinct l = eval (filtering ff l) S.empty
+  where 
+    ff a = do
+      s <- get
+      if S.member a s then
+        pure False
+      else do
+        put (S.insert a s)
+        pure True
 
 -- | A happy number is a positive integer, where the sum of the square of its digits eventually reaches 1 after repetition.
 -- In contrast, a sad number (not a happy number) is where the sum of the square of its digits never reaches 1
@@ -202,8 +218,15 @@ distinct =
 --
 -- >>> isHappy 44
 -- True
+square :: Integer -> Integer
+square n = toInteger $ sum $ map ((\x -> x*x) . digitToInt) $ toList $ show n
+  where toList [] = Nil
+        toList (x:xs) = x :. toList xs 
 isHappy ::
   Integer
   -> Bool
-isHappy =
-  error "todo: Course.State#isHappy"
+isHappy n =extractBool  $ (==1) <$> firstRepeat inflist 
+  where
+    extractBool (Full True) = True
+    extractBool _ = False 
+    inflist = produce square n

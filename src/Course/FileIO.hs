@@ -10,6 +10,7 @@ import Course.Applicative
 import Course.Monad
 import Course.Functor
 import Course.List
+import System.Posix (PathVar(PathNameLimit))
 
 {-
 
