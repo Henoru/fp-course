@@ -7,7 +7,7 @@
 * [x] `Course.State`
 * [x] `Course.StateT`
 * [x] `Course.Extend`
-* [ ] `Course.Comonad`
+* [x] `Course.Comonad`
 * [ ] `Course.Contravariant`
 * [ ] `Course.Compose`
 * [ ] `Course.Traversable`
