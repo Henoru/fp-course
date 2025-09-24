@@ -8,8 +8,8 @@
 * [x] `Course.StateT`
 * [x] `Course.Extend`
 * [x] `Course.Comonad`
-* [ ] `Course.Contravariant`
-* [ ] `Course.Compose`
+* [x] `Course.Contravariant`
+* [x] `Course.Compose`
 * [ ] `Course.Traversable`
 * [ ] `Course.ListZipper`
 * [ ] `Course.Parser` *(see also `Course.Person` for the parsing rules)*
