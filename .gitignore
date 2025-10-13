@@ -40,3 +40,6 @@ ops/*.retry
 
 # nix
 result
+
+# github
+.github
