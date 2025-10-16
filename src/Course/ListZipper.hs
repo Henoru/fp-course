@@ -12,7 +12,6 @@ import Course.Extend
 import Course.Comonad
 import Course.Traversable
 import qualified Prelude as P
-
 -- $setup
 -- >>> import Test.QuickCheck
 -- >>> import Data.Maybe(maybe)
@@ -319,7 +318,7 @@ moveLeftLoop ::
 moveLeftLoop (ListZipper Nil x r) =
   case reverse r of
     Nil -> ListZipper Nil x Nil
-    (r':.rs) -> ListZipper rs r' (x:.Nil)
+    (r':.rs) -> ListZipper (rs ++ (x:.Nil)) r' Nil
 moveLeftLoop (ListZipper (l:.ls) x r) =
   ListZipper ls l (x:.r)
 -- | Move the zipper right, or if there are no elements to the right, go to the far left.
@@ -336,6 +335,8 @@ moveRightLoop (ListZipper l x Nil) =
   case reverse l of
     Nil -> ListZipper Nil x Nil
     (l':.ls) -> ListZipper Nil l' (ls ++ (x:.Nil))
+moveRightLoop (ListZipper l x (r:.rs)) =
+  ListZipper (x:.l) r rs
 
 -- | Move the zipper one position to the left.
 --
@@ -497,8 +498,10 @@ moveLeftN' (0) z =
 moveLeftN' n z
   | n < 0 = moveRightN' (negate n) z
   | otherwise = case moveLeft z of
-      MLZ Empty -> Left n
-      MLZ (Full z') -> moveLeftN' (n - 1) z'
+      MLZ Empty -> Left 0
+      MLZ (Full z') -> case moveLeftN' (n - 1) z' of
+        Left m -> Left (m + 1)
+        Right z'' -> Right z''
 
 -- | Move the focus right the given number of positions. If the value is negative, move left instead.
 -- If the focus cannot be moved, the given number of times, return the value by which it can be moved instead.
@@ -526,8 +529,10 @@ moveRightN' (0) z =
 moveRightN' n z
   | n < 0 = moveLeftN' (negate n) z
   | otherwise = case moveRight z of
-      MLZ Empty -> Left n
-      MLZ (Full z') -> moveRightN' (n - 1) z'
+      MLZ Empty -> Left 0
+      MLZ (Full z') -> case moveRightN' (n - 1) z' of
+        Left m -> Left (m + 1)
+        Right z'' -> Right z''
 
 -- | Move the focus to the given absolute position in the zipper. Traverse the zipper only to the extent required.
 --
@@ -575,7 +580,7 @@ end ::
 end (ListZipper l x r) =
   case reverse r of
     Nil -> ListZipper l x r
-    (r':.rs) -> ListZipper (x:.l ++ rs) r' Nil
+    (r':.rs) -> ListZipper (rs ++ x:.l) r' Nil
 
 -- | Move the focus to the start of the zipper.
 --
@@ -756,7 +761,7 @@ instance Comonad ListZipper where
 -- Empty
 instance Traversable ListZipper where
   traverse f (ListZipper l x r) =
-    ListZipper <$> traverse f l <*> f x <*> traverse f r
+    ListZipper <$> (reverse <$> traverse f (reverse l)) <*> f x <*> traverse f r
 
 -- | Implement the `Traversable` instance for `MaybeListZipper`.
 --

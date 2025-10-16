@@ -30,7 +30,6 @@ instance Comonad ExactlyOne where
     ExactlyOne a
     -> a
   copure (ExactlyOne a) = a
-
 -- | Witness that all things with (<<=) and copure also have (<$>).
 --
 -- >>> (+10) <$$> ExactlyOne 7
