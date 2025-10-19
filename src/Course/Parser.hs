@@ -224,19 +224,15 @@ instance Applicative Parser where
     Parser (a -> b)
     -> Parser a
     -> Parser b
-  (<*>) (P f) (P p) =
-    P $ \input -> case f input of
-      UnexpectedEof       -> UnexpectedEof
-      ExpectedEof i       -> ExpectedEof i
-      UnexpectedChar c    -> UnexpectedChar c
-      UnexpectedString s  -> UnexpectedString s
-      Result i func       -> case p i of
-        UnexpectedEof       -> UnexpectedEof
-        ExpectedEof i'      -> ExpectedEof i'
-        UnexpectedChar c    -> UnexpectedChar c
-        UnexpectedString s  -> UnexpectedString s
-        Result i' a         -> Result i' (func a)
-
+  -- (<*>) (P pf) (P pa) = P $ \input ->
+  --   pf input `onResult` \rest f ->
+  --     pa rest  `onResult` \rest' a ->
+  --       Result rest' (f a)
+  (<*>) pf pa =
+    pf >>= \f' ->
+    pa >>= \a' ->
+    pure (f' a')
+    
 -- | Return a parser that produces a character but fails if
 --
 --   * The input is empty.

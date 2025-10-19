@@ -13,8 +13,8 @@
 * [x] `Course.Traversable`
 * [x] `Course.ListZipper`
 * [x] `Course.Parser` *(see also `Course.Person` for the parsing rules)*
-* [ ] `Course.MoreParser`
-* [ ] `Course.JsonParser`
+* [x] `Course.MoreParser`
+* [x] `Course.JsonParser`
 * [ ] `Course.Interactive`
 * [ ] `Course.Anagrams`
 * [ ] `Course.FastAnagrams`
