@@ -15,7 +15,7 @@
 * [x] `Course.Parser` *(see also `Course.Person` for the parsing rules)*
 * [x] `Course.MoreParser`
 * [x] `Course.JsonParser`
-* [ ] `Course.Interactive`
-* [ ] `Course.Anagrams`
+* [x] `Course.Interactive`
+* [x] `Course.Anagrams`
 * [ ] `Course.FastAnagrams`
-* [ ] `Course.Cheque`
+* [x] `Course.Cheque`

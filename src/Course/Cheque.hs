@@ -1,6 +1,8 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Use lambda-case" #-}
 
 {-
 
@@ -25,6 +27,7 @@ import Course.List
 import Course.Functor
 import Course.Applicative
 import Course.Monad
+import Distribution.Compat.Prelude (Show(show))
 
 -- $setup
 -- >>> :set -XOverloadedStrings
@@ -219,7 +222,35 @@ data Digit3 =
   | D2 Digit Digit
   | D3 Digit Digit Digit
   deriving Eq
-
+showDigit3 :: Digit3 -> Chars
+showDigit3 (D1 d) =showDigit d
+showDigit3 (D2 Zero d1) = showDigit d1
+showDigit3 (D2 One d1) =
+  case d1 of
+    Zero -> "ten"
+    One -> "eleven"
+    Two -> "twelve"
+    Three -> "thirteen"
+    Four -> "fourteen"
+    Five -> "fifteen"
+    Six -> "sixteen"
+    Seven -> "seventeen"
+    Eight -> "eighteen"
+    Nine -> "nineteen"
+showDigit3 (D2 d2 Zero) =
+  case d2 of
+    Two -> "twenty"
+    Three -> "thirty"
+    Four -> "forty"
+    Five -> "fifty"
+    Six -> "sixty"
+    Seven -> "seventy"
+    Eight -> "eighty"
+    Nine -> "ninety"
+showDigit3 (D2 d2 d1) = showDigit3 (D2 d2 Zero) ++ "-" ++ showDigit d1
+showDigit3 (D3 Zero d2 d1) = showDigit3 (D2 d2 d1)
+showDigit3 (D3 d3 Zero Zero) = showDigit d3 ++ " hundred"
+showDigit3 (D3 d3 d2 d1) = showDigit d3 ++ " hundred and " ++ showDigit3 (D2 d2 d1)
 -- Possibly convert a character to a digit.
 fromChar ::
   Char
@@ -323,5 +354,81 @@ fromChar _ =
 dollars ::
   Chars
   -> Chars
-dollars =
-  error "todo: Course.Cheque#dollars"
+dollars str =
+  showDollar dollorsPart ++ " and " ++ showCents centsPart
+  where
+    (dollorsOriPart, centsOriPart) = splitOn (== '.') str
+
+    dollorsPart = clearZero (
+      foldr
+        (\c acc ->
+          case fromChar c of
+            Empty -> acc
+            Full d -> accumulateDigit d acc)
+        Nil
+        dollorsOriPart)
+      where
+        accumulateDigit :: Digit -> List Digit3 -> List Digit3
+        accumulateDigit d Nil = D1 d :. Nil
+        accumulateDigit d (D1 d1 :. ds) = D2 d d1 :. ds
+        accumulateDigit d (D2 d2 d1 :. ds) = D3 d d2 d1 :. ds
+        accumulateDigit d p = D1 d :. p
+        clearZero :: List Digit3 -> List Digit3
+        clearZero Nil = Nil
+        clearZero (D1 Zero :. ds) = clearZero ds
+        clearZero (D2 Zero d :. ds) = clearZero (D1 d :. ds)
+        clearZero (D3 Zero d2 d1 :. ds) = clearZero (D2 d2 d1 :. ds)
+        clearZero ds = ds
+    centsPart =
+      take 2 $
+        foldr
+          (\c acc ->
+            case fromChar c of
+              Empty -> acc
+              Full d -> d :. acc)
+          Nil
+          centsOriPart
+
+    showDollar :: List Digit3 -> Chars
+    showDollar Nil = "zero dollars"
+    showDollar (D1 One :. Nil) = "one dollar"
+    showDollar ds =
+      fst (foldr
+          (\d (acc, illions) ->
+            case illions of
+              Nil -> error "illion list exhausted"
+              (ill :. rest) ->
+                (if isZero d
+                  then acc
+                  else
+                    showDigit3 d
+                    ++ (if ill == "" then "" else " " ++ ill)
+                    ++ (if acc == "" then "" else " " ++ acc)
+                , rest
+                ))
+          ("dollars", illion)
+          ds)
+      where
+        isZero :: Digit3 -> Bool
+        isZero (D1 Zero) = True
+        isZero (D2 Zero Zero) = True
+        isZero (D3 Zero Zero Zero) = True
+        isZero _ = False
+
+    showCents :: List Digit -> Chars
+    showCents Nil = "zero cents"
+    showCents (d1 :. Nil) = showDigit3 (D2 d1 Zero) ++ " cents"
+    showCents (Zero :. One :. Nil) = "one cent"
+    showCents (d1 :. d2 :. Nil) = showDigit3 (D2 d1 d2) ++ " cents"
+    showCents _ = error "centsPart should have at most two digits"
+
+foldr :: (a -> b -> b) -> b -> List a -> b
+foldr _ z Nil         = z
+foldr f z (x :. xs)   = f x (foldr f z xs)
+splitOn :: (a -> Bool) -> List a -> (List a , List a)
+splitOn _ Nil = (Nil, Nil)
+splitOn p (x :. xs)
+  | p x       = (Nil, xs)
+  | otherwise = let (l, r) = splitOn p xs
+                in (x :. l, r)
+
